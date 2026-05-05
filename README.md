@@ -8,7 +8,8 @@ Results are surfaced through a clean **Flask web UI** with collapsible findings,
 
 ## Screenshot
 
-> *(Add a screenshot of the UI here)*
+<img width="1915" height="726" alt="image" src="https://github.com/user-attachments/assets/fbc1ec4e-cb71-42d6-a965-86fa783e2037" />
+
 
 ---
 
