@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brute Force Detector — SOC Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base:     #10131a;
+    --bg-surface:  #161b26;
+    --bg-raised:   #1c2333;
+    --bg-hover:    #222a3a;
+    --border:      #2a3347;
+    --border-soft: #1f2a3d;
+    --text-primary:   #e8edf5;
+    --text-secondary: #8a98b0;
+    --text-muted:     #4e5d78;
+    --accent:      #4a7cdc;
+    --accent-soft: rgba(74,124,220,0.12);
+    --accent-glow: rgba(74,124,220,0.06);
+    --red:         #e05252;
+    --red-soft:    rgba(224,82,82,0.1);
+    --amber:       #d4882a;
+    --amber-soft:  rgba(212,136,42,0.1);
+    --blue:        #4a7cdc;
+    --blue-soft:   rgba(74,124,220,0.1);
+    --green:       #3a9e6e;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg-base); color: var(--text-primary); font-family: var(--sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .layout { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: 56px 1fr; height: 100vh; }
+  .topbar { grid-column: 1 / -1; background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 2rem; gap: 1rem; }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; }
+  .topbar-icon { width: 30px; height: 30px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .topbar-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); letter-spacing: 0.02em; }
+  .topbar-sub  { font-size: 0.72rem; color: var(--text-muted); font-family: var(--mono); }
+  .topbar-divider { width: 1px; height: 24px; background: var(--border); margin: 0 1rem; }
+  .topbar-pill { font-size: 0.65rem; font-family: var(--mono); font-weight: 500; padding: 0.2rem 0.6rem; border-radius: 20px; background: var(--accent-soft); color: var(--accent); border: 1px solid rgba(74,124,220,0.2); letter-spacing: 0.05em; text-transform: uppercase; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.8rem; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-label { font-size: 0.7rem; color: var(--text-muted); font-family: var(--mono); }
+  .sidebar { background: var(--bg-surface); border-right: 1px solid var(--border); padding: 2rem 1.5rem; display: flex; flex-direction: column; overflow-y: auto; }
+  .sidebar-section-label { font-size: 0.62rem; font-family: var(--mono); font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.75rem; }
+  .form-group { margin-bottom: 1.25rem; }
+  label { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.4rem; }
+  input[type="text"], input[type="number"] { width: 100%; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem 0.85rem; color: var(--text-primary); font-family: var(--mono); font-size: 0.82rem; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  input::placeholder { color: var(--text-muted); }
+  .input-hint { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.3rem; font-family: var(--mono); }
+  .divider { border: none; border-top: 1px solid var(--border-soft); margin: 1.5rem 0; }
+  .btn-primary { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); padding: 0.7rem 1rem; font-family: var(--sans); font-size: 0.82rem; font-weight: 600; cursor: pointer; letter-spacing: 0.03em; transition: background 0.15s, transform 0.1s, box-shadow 0.15s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+  .btn-primary:hover   { background: #3d6ec7; box-shadow: 0 4px 16px rgba(74,124,220,0.25); }
+  .btn-primary:active  { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+  .sidebar-footer { margin-top: auto; padding-top: 1.5rem; border-top: 1px solid var(--border-soft); }
+  .sidebar-footer-item { font-size: 0.65rem; font-family: var(--mono); color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 0.35rem; }
+  .sidebar-footer-item span:last-child { color: var(--text-secondary); }
+  .btn-reset-keys { background: none; border: none; color: var(--text-muted); font-family: var(--mono); font-size: 0.65rem; cursor: pointer; text-decoration: underline; margin-top: 0.75rem; padding: 0; }
+  .btn-reset-keys:hover { color: var(--red); }
+  .main { overflow-y: auto; padding: 2rem 2.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4rem; border: 1px dashed var(--border); border-radius: var(--radius-lg); gap: 0.75rem; }
+  .empty-icon  { font-size: 2.5rem; opacity: 0.4; }
+  .empty-title { font-size: 1rem; font-weight: 600; color: var(--text-secondary); }
+  .empty-sub   { font-size: 0.78rem; color: var(--text-muted); max-width: 320px; line-height: 1.6; }
+  .spinner-wrap { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 4rem; gap: 1.2rem; }
+  .spinner-wrap.active { display: flex; }
+  .spinner { width: 36px; height: 36px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.75s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner-label { font-size: 0.78rem; color: var(--text-muted); font-family: var(--mono); }
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+  .stat-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; }
+  .stat-label { font-size: 0.65rem; font-family: var(--mono); font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+  .stat-value { font-size: 1.8rem; font-weight: 700; line-height: 1; }
+  .stat-sub   { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.35rem; font-family: var(--mono); }
+  .kql-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .kql-header { display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1.25rem; background: var(--bg-raised); border-bottom: 1px solid var(--border); }
+  .kql-header-label { font-size: 0.65rem; font-family: var(--mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .kql-body { padding: 1rem 1.25rem; font-family: var(--mono); font-size: 0.78rem; color: var(--accent); white-space: pre-wrap; line-height: 1.7; background: var(--bg-base); }
+  .findings-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .findings-title { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.08em; }
+  .findings-count { font-size: 0.7rem; font-family: var(--mono); color: var(--text-muted); }
+  .finding-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1rem; transition: border-color 0.15s; }
+  .finding-card:hover { border-color: #3a4a65; }
+  .finding-card.high   { border-left: 3px solid var(--red); }
+  .finding-card.medium { border-left: 3px solid var(--amber); }
+  .finding-card.low    { border-left: 3px solid var(--blue); }
+  .finding-header { padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; cursor: pointer; user-select: none; }
+  .finding-header:hover { background: var(--bg-hover); }
+  .finding-title-text { font-size: 0.92rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; }
+  .finding-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+  .badge { font-size: 0.62rem; font-weight: 500; padding: 0.2rem 0.55rem; border-radius: 4px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid transparent; }
+  .badge-high   { background: var(--red-soft);   color: var(--red);   border-color: rgba(224,82,82,0.2); }
+  .badge-medium { background: var(--amber-soft);  color: var(--amber); border-color: rgba(212,136,42,0.2); }
+  .badge-low    { background: var(--blue-soft);   color: var(--blue);  border-color: rgba(74,124,220,0.2); }
+  .badge-type   { background: var(--bg-raised); color: var(--text-secondary); border-color: var(--border); }
+  .badge-mitre  { background: var(--bg-raised); color: var(--text-secondary); border-color: var(--border); }
+  .finding-chevron { color: var(--text-muted); font-size: 0.8rem; flex-shrink: 0; transition: transform 0.2s; margin-top: 2px; }
+  .finding-card.open .finding-chevron { transform: rotate(180deg); }
+  .finding-body { display: none; padding: 0 1.5rem 1.5rem; border-top: 1px solid var(--border-soft); }
+  .finding-card.open .finding-body { display: block; }
+  .finding-desc { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.75; padding: 1rem 0; border-bottom: 1px solid var(--border-soft); margin-bottom: 1rem; }
+  .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 1rem; }
+  .meta-full { grid-column: span 3; }
+  .meta-half { grid-column: span 1; }
+  .meta-label { font-size: 0.62rem; font-family: var(--mono); font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
+  .meta-value { font-size: 0.78rem; color: var(--text-primary); font-family: var(--mono); }
+  .meta-list { list-style: none; padding: 0; }
+  .meta-list li { font-size: 0.78rem; color: var(--text-primary); font-family: var(--mono); padding: 0.15rem 0; display: flex; align-items: center; gap: 0.4rem; }
+  .meta-list li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+  .finding-notes { font-size: 0.75rem; color: var(--text-muted); font-family: var(--mono); padding: 0.75rem 1rem; background: var(--bg-raised); border-radius: var(--radius); border-left: 2px solid var(--border); margin-top: 0.75rem; }
+  .mitre-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .mitre-item { font-size: 0.72rem; font-family: var(--mono); color: var(--text-secondary); }
+  .mitre-sep  { color: var(--text-muted); }
+  .btn-isolate { margin-top: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; background: var(--red-soft); color: var(--red); border: 1px solid rgba(224,82,82,0.25); border-radius: var(--radius); padding: 0.55rem 1rem; font-family: var(--sans); font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn-isolate:hover { background: rgba(224,82,82,0.18); border-color: rgba(224,82,82,0.4); }
+  .no-findings { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 3rem; text-align: center; }
+  .no-findings-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .no-findings-text { font-size: 0.85rem; color: var(--text-secondary); }
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.85rem 1.25rem; font-size: 0.78rem; color: var(--text-primary); box-shadow: 0 8px 32px rgba(0,0,0,0.4); opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s; z-index: 999; max-width: 340px; }
+  .toast.show    { opacity: 1; transform: translateY(0); }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error   { border-left: 3px solid var(--red); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-icon">🛡</div>
+      <div>
+        <div class="topbar-name">Brute Force Detector</div>
+        <div class="topbar-sub">SOC · Credential Attack Analysis</div>
+      </div>
+    </div>
+    <div class="topbar-divider"></div>
+    <span class="topbar-pill">MDE · OpenAI</span>
+    <div class="topbar-right">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-label" id="statusLabel">Ready</span>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="sidebar-section-label">Investigation Parameters</div>
+    <div class="form-group">
+      <label>Device Name</label>
+      <input type="text" id="deviceName" placeholder="windows-target-1">
+      <div class="input-hint">Prefix match — startswith()</div>
+    </div>
+    <div class="form-group">
+      <label>Time Range (hours)</label>
+      <input type="number" id="hours" value="24" min="1" max="168">
+      <div class="input-hint">Max 168 hrs (7 days)</div>
+    </div>
+    <button class="btn-primary" id="runBtn" onclick="runAnalysis()">
+      <span>▶</span> Run Analysis
+    </button>
+    <hr class="divider">
+    <div class="sidebar-section-label">Data Source</div>
+    <div style="font-size:0.72rem;font-family:var(--mono);color:var(--text-muted);line-height:1.9;">
+      Table: DeviceLogonEvents<br>
+      ActionType: LogonFailed / LogonSuccess<br>
+      Fields: AccountName, RemoteIP,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RemoteDeviceName
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-item"><span>Model</span><span>gpt-5-mini</span></div>
+      <div class="sidebar-footer-item"><span>Framework</span><span>MITRE ATT&amp;CK</span></div>
+      <div class="sidebar-footer-item"><span>Platform</span><span>Azure MDE</span></div>
+      <div style="margin-top:0.75rem;">
+        <button class="btn-reset-keys" onclick="clearKeys()">Reset API Keys</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="spinner-wrap" id="spinner">
+      <div class="spinner"></div>
+      <div class="spinner-label" id="spinnerLabel">Querying Log Analytics...</div>
+    </div>
+    <div class="stat-row" id="statRow" style="display:none;">
+      <div class="stat-card">
+        <div class="stat-label">Device</div>
+        <div class="stat-value" id="statDevice" style="font-size:1rem;color:var(--accent);">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Log Events</div>
+        <div class="stat-value" id="statLogs" style="color:var(--text-primary);">—</div>
+        <div class="stat-sub">DeviceLogonEvents</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Threats Detected</div>
+        <div class="stat-value" id="statThreats">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Severity Breakdown</div>
+        <div class="stat-value" id="statBreakdown" style="font-size:1.1rem;">—</div>
+        <div class="stat-sub">High / Medium / Low</div>
+      </div>
+    </div>
+    <div class="kql-card" id="kqlCard" style="display:none;">
+      <div class="kql-header">
+        <span class="kql-header-label">KQL Query Executed</span>
+        <span style="font-size:0.65rem;font-family:var(--mono);color:var(--text-muted);">Log Analytics Workspace</span>
+      </div>
+      <div class="kql-body" id="kqlBody"></div>
+    </div>
+    <div id="findingsSection" style="display:none;">
+      <div class="findings-header">
+        <span class="findings-title">Findings</span>
+        <span class="findings-count" id="findingsCount"></span>
+      </div>
+      <div id="findingsList"></div>
+    </div>
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">No Investigation Running</div>
+      <div class="empty-sub">Enter a device name and time range in the left panel, then click Run Analysis to begin credential attack detection.</div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentDevice = '';
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+
+  function setSpinner(show, label = 'Querying Log Analytics...') {
+    document.getElementById('spinner').classList.toggle('active', show);
+    document.getElementById('spinnerLabel').textContent = label;
+  }
+
+  function setStatus(label, ready = true) {
+    document.getElementById('statusLabel').textContent = label;
+    document.getElementById('statusDot').style.background = ready ? 'var(--green)' : 'var(--amber)';
+    document.getElementById('statusDot').style.boxShadow  = ready ? '0 0 6px var(--green)' : '0 0 6px var(--amber)';
+  }
+
+  function listItems(arr) {
+    if (!arr || !arr.length) return '<li style="color:var(--text-muted)">—</li>';
+    return arr.map(x => `<li>${x}</li>`).join('');
+  }
+
+  function toggleFinding(card) { card.classList.toggle('open'); }
+
+  async function clearKeys() {
+    if (!confirm('Clear saved keys? You will be taken back to the setup screen.')) return;
+    await fetch('/clear-keys', { method: 'POST' });
+    window.location.href = '/setup';
+  }
+
+  async function runAnalysis() {
+    const device = document.getElementById('deviceName').value.trim();
+    const hours  = parseInt(document.getElementById('hours').value) || 24;
+    if (!device) { showToast('Enter a device name to continue.', 'error'); return; }
+
+    currentDevice = device;
+    document.getElementById('emptyState').style.display      = 'none';
+    document.getElementById('statRow').style.display         = 'none';
+    document.getElementById('kqlCard').style.display         = 'none';
+    document.getElementById('findingsSection').style.display = 'none';
+    document.getElementById('findingsList').innerHTML        = '';
+    document.getElementById('runBtn').disabled               = true;
+
+    setStatus('Querying...', false);
+    setSpinner(true, 'Querying Log Analytics Workspace...');
+
+    try {
+      const res  = await fetch('/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_name: device, hours })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        setSpinner(false); setStatus('Error', false);
+        showToast(data.error, 'error');
+        document.getElementById('emptyState').style.display = 'flex';
+        return;
+      }
+
+      setSpinner(false); setStatus('Ready');
+
+      const findings = data.findings || [];
+      const high   = findings.filter(f => f.confidence?.toLowerCase() === 'high').length;
+      const medium = findings.filter(f => f.confidence?.toLowerCase() === 'medium').length;
+      const low    = findings.filter(f => f.confidence?.toLowerCase() === 'low').length;
+
+      document.getElementById('statDevice').textContent  = device;
+      document.getElementById('statLogs').textContent    = data.log_count ?? 0;
+      document.getElementById('statThreats').textContent = findings.length;
+      document.getElementById('statThreats').style.color = findings.length ? 'var(--red)' : 'var(--green)';
+      document.getElementById('statBreakdown').innerHTML =
+        `<span style="color:var(--red)">${high}</span>&thinsp;/&thinsp;<span style="color:var(--amber)">${medium}</span>&thinsp;/&thinsp;<span style="color:var(--blue)">${low}</span>`;
+      document.getElementById('statRow').style.display = 'grid';
+
+      const kql = `DeviceLogonEvents\n| where DeviceName startswith "${device}"\n| project TimeGenerated, AccountName, DeviceName, ActionType, RemoteIP, RemoteDeviceName\n| order by TimeGenerated asc`;
+      document.getElementById('kqlBody').textContent   = kql;
+      document.getElementById('kqlCard').style.display = 'block';
+
+      document.getElementById('findingsSection').style.display = 'block';
+      document.getElementById('findingsCount').textContent = `${findings.length} result${findings.length !== 1 ? 's' : ''}`;
+
+      const list = document.getElementById('findingsList');
+
+      if (!findings.length) {
+        list.innerHTML = `<div class="no-findings"><div class="no-findings-icon">✅</div><div class="no-findings-text">No brute force or credential attack activity detected.</div></div>`;
+        return;
+      }
+
+      findings.forEach((f, i) => {
+        const conf  = (f.confidence || 'low').toLowerCase();
+        const mitre = f.mitre || {};
+        const mitreParts = [mitre.tactic, mitre.technique, mitre.id].filter(Boolean);
+
+        const card = document.createElement('div');
+        card.className = `finding-card ${conf}`;
+        card.innerHTML = `
+          <div class="finding-header" onclick="toggleFinding(this.parentElement)">
+            <div style="flex:1;">
+              <div class="finding-title-text">#${i+1} · ${f.title || ''}</div>
+              <div class="finding-badges">
+                <span class="badge badge-${conf}">${f.confidence || '?'}</span>
+                <span class="badge badge-type">${f.attack_type || '?'}</span>
+                ${mitre.id ? `<span class="badge badge-mitre">${mitre.id}</span>` : ''}
+              </div>
+            </div>
+            <div class="finding-chevron">▼</div>
+          </div>
+          <div class="finding-body">
+            <div class="finding-desc">${f.description || ''}</div>
+            <div class="meta-grid">
+              <div class="meta-half">
+                <div class="meta-label">Source IPs</div>
+                <ul class="meta-list">${listItems(f.source_ips)}</ul>
+              </div>
+              <div class="meta-half">
+                <div class="meta-label">Targeted Accounts</div>
+                <ul class="meta-list">${listItems(f.targeted_accounts)}</ul>
+              </div>
+              <div class="meta-half">
+                <div class="meta-label">Failed Attempts</div>
+                <div class="meta-value">${f.failed_attempt_count ?? '—'}</div>
+                <div class="meta-label" style="margin-top:0.6rem;">Success After Failure</div>
+                <div class="meta-value">${f.success_after_failure ?? '—'}</div>
+              </div>
+              <div class="meta-half" style="grid-column:span 2;">
+                <div class="meta-label">MITRE ATT&CK</div>
+                <div class="mitre-row">
+                  ${mitreParts.map((p, idx) => `<span class="mitre-item">${p}</span>${idx < mitreParts.length-1 ? '<span class="mitre-sep">·</span>' : ''}`).join('')}
+                </div>
+                <div class="meta-label" style="margin-top:0.6rem;">Technique Description</div>
+                <div class="meta-value" style="color:var(--text-secondary);font-size:0.75rem;">${mitre.description || '—'}</div>
+              </div>
+              <div class="meta-half">
+                <div class="meta-label">IOCs</div>
+                <ul class="meta-list">${listItems(f.indicators_of_compromise)}</ul>
+              </div>
+              <div class="meta-half">
+                <div class="meta-label">Recommendations</div>
+                <ul class="meta-list">${listItems(f.recommendations)}</ul>
+              </div>
+              ${f.log_lines?.length ? `<div class="meta-full"><div class="meta-label">Log Lines</div><ul class="meta-list">${listItems(f.log_lines)}</ul></div>` : ''}
+            </div>
+            ${f.notes ? `<div class="finding-notes">📝 ${f.notes}</div>` : ''}
+            ${conf === 'high' ? `<button class="btn-isolate" onclick="isolateVM(event)">⚠ Isolate Device — ${device}</button>` : ''}
+          </div>`;
+        list.appendChild(card);
+      });
+
+    } catch (err) {
+      setSpinner(false); setStatus('Error', false);
+      showToast('Request failed — is Flask running?', 'error');
+      document.getElementById('emptyState').style.display = 'flex';
+    } finally {
+      document.getElementById('runBtn').disabled = false;
+    }
+  }
+
+  async function isolateVM(e) {
+    e.stopPropagation();
+    if (!confirm(`Isolate ${currentDevice} via MDE API?\n\nThis will cut off network access to the device.`)) return;
+    try {
+      const res  = await fetch('/isolate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_name: currentDevice })
+      });
+      const data = await res.json();
+      data.success ? showToast(`✓ ${data.message}`, 'success') : showToast(data.message || data.error, 'error');
+    } catch { showToast('Isolation request failed.', 'error'); }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.activeElement.tagName !== 'BUTTON') runAnalysis();
+  });
+</script>
+</body>
+</html>

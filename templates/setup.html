@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setup — Brute Force Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #10131a;
+    --surface: #161b26;
+    --raised:  #1c2333;
+    --border:  #2a3347;
+    --accent:  #4a7cdc;
+    --accent-glow: rgba(74,124,220,0.08);
+    --text:    #e8edf5;
+    --text2:   #8a98b0;
+    --text3:   #4e5d78;
+    --red:     #e05252;
+    --green:   #3a9e6e;
+    --mono:    'IBM Plex Mono', monospace;
+    --sans:    'IBM Plex Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; -webkit-font-smoothing: antialiased; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 480px; overflow: hidden; }
+  .card-header { padding: 2rem 2rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+  .header-icon { width: 40px; height: 40px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .header-title { font-size: 1rem; font-weight: 600; color: var(--text); }
+  .header-sub   { font-size: 0.72rem; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+  .card-body { padding: 1.75rem 2rem; }
+  .info-box { background: var(--raised); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; font-size: 0.75rem; color: var(--text2); line-height: 1.7; margin-bottom: 1.5rem; font-family: var(--mono); }
+  .info-box strong { color: var(--text); }
+  .form-group { margin-bottom: 1.25rem; }
+  label { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text2); margin-bottom: 0.4rem; }
+  input { width: 100%; background: var(--raised); border: 1px solid var(--border); border-radius: 6px; padding: 0.65rem 0.9rem; color: var(--text); font-family: var(--mono); font-size: 0.8rem; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  input::placeholder { color: var(--text3); }
+  .input-hint { font-size: 0.65rem; color: var(--text3); font-family: var(--mono); margin-top: 0.3rem; }
+  .btn-save { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 0.75rem; font-family: var(--sans); font-size: 0.85rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; transition: background 0.15s, transform 0.1s; letter-spacing: 0.02em; }
+  .btn-save:hover  { background: #3d6ec7; }
+  .btn-save:active { transform: scale(0.98); }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+  .error-msg   { display: none; font-size: 0.72rem; color: var(--red);   font-family: var(--mono); margin-top: 0.75rem; padding: 0.6rem 0.8rem; background: rgba(224,82,82,0.08);  border: 1px solid rgba(224,82,82,0.2);  border-radius: 4px; }
+  .success-msg { display: none; font-size: 0.72rem; color: var(--green); font-family: var(--mono); margin-top: 0.75rem; padding: 0.6rem 0.8rem; background: rgba(58,158,110,0.08); border: 1px solid rgba(58,158,110,0.2); border-radius: 4px; }
+  .error-msg.show, .success-msg.show { display: block; }
+  .card-footer { padding: 1rem 2rem; border-top: 1px solid var(--border); font-size: 0.65rem; color: var(--text3); font-family: var(--mono); line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <div class="header-icon">🛡</div>
+    <div>
+      <div class="header-title">Brute Force Detector — Setup</div>
+      <div class="header-sub">First-run configuration</div>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="info-box">
+      Your keys are saved <strong>locally</strong> on this machine only.<br>
+      They are never sent anywhere except to OpenAI and Azure directly.
+    </div>
+    <div class="form-group">
+      <label>OpenAI API Key</label>
+      <input type="password" id="openaiKey" placeholder="sk-...">
+      <div class="input-hint">platform.openai.com → API Keys</div>
+    </div>
+    <div class="form-group">
+      <label>Log Analytics Workspace ID</label>
+      <input type="text" id="workspaceId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      <div class="input-hint">Azure Portal → Log Analytics Workspaces → Overview</div>
+    </div>
+    <button class="btn-save" id="saveBtn" onclick="saveKeys()">Save and Continue</button>
+    <div class="error-msg"   id="errorMsg"></div>
+    <div class="success-msg" id="successMsg">Keys saved — redirecting...</div>
+  </div>
+  <div class="card-footer">
+    Keys are stored in .config.json next to the application.<br>
+    Azure auth uses DefaultAzureCredential — run <strong>az login</strong> if not already authenticated.
+  </div>
+</div>
+<script>
+  async function saveKeys() {
+    const openaiKey   = document.getElementById('openaiKey').value.trim();
+    const workspaceId = document.getElementById('workspaceId').value.trim();
+    const btn         = document.getElementById('saveBtn');
+    const err         = document.getElementById('errorMsg');
+    const success     = document.getElementById('successMsg');
+
+    err.classList.remove('show');
+    success.classList.remove('show');
+
+    if (!openaiKey || !workspaceId) {
+      err.textContent = 'Both fields are required.';
+      err.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const res  = await fetch('/save-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openai_key: openaiKey, workspace_id: workspaceId })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        success.classList.add('show');
+        setTimeout(() => window.location.href = '/', 1200);
+      } else {
+        err.textContent = data.error || 'Something went wrong.';
+        err.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Save and Continue';
+      }
+    } catch {
+      err.textContent = 'Request failed.';
+      err.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Save and Continue';
+    }
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') saveKeys(); });
+</script>
+</body>
+</html>
